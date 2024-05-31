@@ -2,6 +2,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 from Exceptions.PGP_Exception import PGP_Exception
 
+
 class RSAEncription:
 
     @classmethod
