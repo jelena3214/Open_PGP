@@ -12,7 +12,7 @@ class PrivateKey:
     def __init__(cls, name, email, passphrase, public_key, private_key):
         cls.timestamp = datetime.now()
         cls.public_key = public_key
-        public_key_hex = public_key.public_bytes(encoding=serialization.Encoding.PEM,
+        public_key_hex = public_key.public_bytes(encoding=serialization.Encoding.DER,
                                                  format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
         cls.key_id = public_key_hex[-16:]
         cls.name = name
@@ -21,13 +21,13 @@ class PrivateKey:
         passphrase_bytes = passphrase.encode('utf-8')
         sha1_hash = hashlib.sha1(passphrase_bytes).hexdigest()
 
-        private_key_pem = private_key.private_bytes(
+        private_key_der = private_key.private_bytes(
             encoding=serialization.Encoding.DER,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption()
         )
 
-        padded_private_key = pad(private_key_pem, 8)
+        padded_private_key = pad(private_key_der, 8)
         cipher = CAST.new(sha1_hash, CAST.MODE_ECB)
         cls.encoded_private_key = cipher.encrypt(padded_private_key)
 

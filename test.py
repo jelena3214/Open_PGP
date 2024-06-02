@@ -37,7 +37,7 @@ def decrypt_private_key(encrypted_private_key, cast_key):
 
 def encrypt_private_key(private_key, cast_key):
     private_key_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.DER,
+        encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption()  # Bez šifrovanja privatnog ključa
     )
@@ -58,7 +58,7 @@ def encrypt_private_key(private_key, cast_key):
 private_key = generate_rsa_key_pair()
 
 print("RSA KEY: ", private_key.private_bytes(
-        encoding=serialization.Encoding.DER,
+        encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption()  # Bez šifrovanja privatnog ključa
 ))
