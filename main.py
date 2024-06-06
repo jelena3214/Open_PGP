@@ -2,7 +2,11 @@ import sys
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QTableWidget, \
-    QTableWidgetItem, QLabel, QHeaderView, QLineEdit, QCheckBox
+    QTableWidgetItem, QLabel, QHeaderView, QLineEdit, QCheckBox, QRadioButton, QHBoxLayout, QMessageBox
+
+from KeyRings.PrivateKeyRing import PrivateKeyRing
+from KeyRings.PublicKeyRing import PublicKeyRing
+from Message import Message
 
 
 class MainWindow(QMainWindow):
@@ -16,10 +20,10 @@ class MainWindow(QMainWindow):
         button3 = QPushButton("Slanje poruke")
         button4 = QPushButton("Prijem poruke")
 
-        button1.clicked.connect(self.open_window1)
-        button2.clicked.connect(self.open_window2)
-        button3.clicked.connect(self.open_window3)
-        button4.clicked.connect(self.open_window4)
+        button1.clicked.connect(self.open_public_key_ring)
+        button2.clicked.connect(self.open_private_key_ring)
+        button3.clicked.connect(self.open_send_message)
+        button4.clicked.connect(self.open_receive_message)
 
         layout = QVBoxLayout()
         layout.addWidget(button1)
@@ -31,28 +35,28 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
-    def open_window1(self):
-        self.new_window = Window1(self)
+    def open_public_key_ring(self):
+        self.new_window = PublicKeyRingWindow(self)
         self.new_window.show()
         self.close()
 
-    def open_window2(self):
-        self.new_window = Window2(self)
+    def open_private_key_ring(self):
+        self.new_window = PrivateKeyRingWindow(self)
         self.new_window.show()
         self.close()
 
-    def open_window3(self):
-        self.new_window = Window3(self)
+    def open_send_message(self):
+        self.new_window = SendMessageWindow(self)
         self.new_window.show()
         self.close()
 
-    def open_window4(self):
-        self.new_window = Window4(self)
+    def open_receive_message(self):
+        self.new_window = ReceiveMessageWindow(self)
         self.new_window.show()
         self.close()
 
 
-class Window1(QWidget):
+class PublicKeyRingWindow(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.setWindowTitle("Prsten javnih ključeva")
@@ -90,9 +94,9 @@ class Window1(QWidget):
         buttonB = QPushButton("Izvezi ključ")
         buttonC = QPushButton("Obriši ključ")
 
-        buttonA.clicked.connect(self.open_windowA)
-        buttonB.clicked.connect(self.open_windowB)
-        buttonC.clicked.connect(self.open_windowC)
+        buttonA.clicked.connect(self.open_key_import)
+        buttonB.clicked.connect(self.open_key_export)
+        buttonC.clicked.connect(self.open_delete_key)
 
         layout.addWidget(buttonA)
         layout.addWidget(buttonB)
@@ -104,16 +108,16 @@ class Window1(QWidget):
 
         self.setLayout(layout)
 
-    def open_windowA(self):
-        self.windowA = WindowA(False)
+    def open_key_import(self):
+        self.windowA = KeyImportWindow(False)
         self.windowA.show()
 
-    def open_windowB(self):
-        self.windowB = WindowB(False)
+    def open_key_export(self):
+        self.windowB = KeyExportWindow(False)
         self.windowB.show()
 
-    def open_windowC(self):
-        self.windowC = WindowC()
+    def open_delete_key(self):
+        self.windowC = DeleteKeyWindow()
         self.windowC.show()
 
     def back_to_main(self):
@@ -121,7 +125,7 @@ class Window1(QWidget):
         self.close()
 
 
-class Window2(QWidget):
+class PrivateKeyRingWindow(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.setWindowTitle("Prsten privatnih ključeva")
@@ -159,9 +163,9 @@ class Window2(QWidget):
         buttonB = QPushButton("Izvezi ključ")
         buttonC = QPushButton("Obriši ključ")
 
-        buttonA.clicked.connect(self.open_windowA)
-        buttonB.clicked.connect(self.open_windowB)
-        buttonC.clicked.connect(self.open_windowC)
+        buttonA.clicked.connect(self.open_key_import)
+        buttonB.clicked.connect(self.open_key_export)
+        buttonC.clicked.connect(self.open_delete_key)
 
         layout.addWidget(buttonA)
         layout.addWidget(buttonB)
@@ -173,16 +177,16 @@ class Window2(QWidget):
 
         self.setLayout(layout)
 
-    def open_windowA(self):
-        self.windowA = WindowA(True)
+    def open_key_import(self):
+        self.windowA = KeyImportWindow(True)
         self.windowA.show()
 
-    def open_windowB(self):
-        self.windowB = WindowB(True)
+    def open_key_export(self):
+        self.windowB = KeyExportWindow(True)
         self.windowB.show()
 
-    def open_windowC(self):
-        self.windowC = WindowC()
+    def open_delete_key(self):
+        self.windowC = DeleteKeyWindow()
         self.windowC.show()
 
     def back_to_main(self):
@@ -190,36 +194,155 @@ class Window2(QWidget):
         self.close()
 
 
-class Window3(QWidget):
+class SendMessageWindow(QWidget):
     def __init__(self, main_window):
         super().__init__()
-        self.setWindowTitle("Prozor 3")
+        self.setWindowTitle("Slanje poruke")
         self.setGeometry(100, 100, 600, 400)
         self.main_window = main_window
 
-        # Layout za prozor 3
         layout = QVBoxLayout()
 
-        # Primer sadržaja za prozor 3 (npr. tekstualni label)
-        label = QLabel("Ovo je prozor 3")
-        layout.addWidget(label)
+        text_layout = QHBoxLayout()
+        text_label = QLabel("Vaš email:")
+        self.text_input_signer = QLineEdit()
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(self.text_input_signer)
 
-        # Kreiranje dugmeta za povratak na meni
+        layout.addLayout(text_layout)
+
+        text_layout = QHBoxLayout()
+        text_label = QLabel("Email primaoca:")
+        self.text_input = QLineEdit()
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(self.text_input)
+
+        layout.addLayout(text_layout)
+
+        self.checkbox_sign = QCheckBox("Potpisivanje poruke")
+        self.checkbox_sign.stateChanged.connect(self.toggle_fields_signature)
+        layout.addWidget(self.checkbox_sign)
+
+        text_layout = QHBoxLayout()
+        text_label = QLabel("Passphase:")
+        self.text_input_pass = QLineEdit()
+        self.text_input_pass.setEnabled(False)
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(self.text_input_pass)
+
+        layout.addLayout(text_layout)
+
+        self.checkbox = QCheckBox("Šifrovanje poruke")
+        self.checkbox.stateChanged.connect(self.toggle_fields)
+        layout.addWidget(self.checkbox)
+
+        self.radio_button1 = QRadioButton("Triple DES")
+        self.radio_button1.setEnabled(False)
+        layout.addWidget(self.radio_button1)
+
+        self.radio_button2 = QRadioButton("AES 128")
+        self.radio_button2.setEnabled(False)
+        layout.addWidget(self.radio_button2)
+
+        self.checkbox_comp = QCheckBox("Kompresija poruke")
+        layout.addWidget(self.checkbox_comp)
+
+        self.checkbox_radix64 = QCheckBox("Radix64 konverzija poruke")
+        layout.addWidget(self.checkbox_radix64)
+
+        text_layout = QHBoxLayout()
+        text_label = QLabel("Poruka:")
+        self.text_input_message = QLineEdit()
+        self.text_input_message.setFixedWidth(600)
+        self.text_input_message.setFixedHeight(100)
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(self.text_input_message)
+
+        layout.addLayout(text_layout)
+
+        text_layout = QHBoxLayout()
+        text_label = QLabel("Destinacija fajla:")
+        self.text_input_filepath = QLineEdit()
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(self.text_input_filepath)
+
+        layout.addLayout(text_layout)
+
+        submit_button = QPushButton("Pošalji")
+        submit_button.clicked.connect(self.send_message)
+        layout.addWidget(submit_button)
+
         back_button = QPushButton("Vrati se na meni")
         back_button.clicked.connect(self.back_to_main)
         layout.addWidget(back_button)
 
         self.setLayout(layout)
 
+    def toggle_fields(self):
+        state = self.checkbox.isChecked()
+        self.radio_button1.setEnabled(state)
+        self.radio_button2.setEnabled(state)
+
+    def toggle_fields_signature(self):
+        state = self.checkbox_sign.isChecked()
+        self.text_input_pass.setEnabled(state)
+
     def back_to_main(self):
         self.main_window.show()
         self.close()
 
+    def send_message(self):
+        filepath = self.text_input_filepath.text()
+        selected_algo = ""
+        message = self.text_input_message.text()
+        signature = self.checkbox_sign.isChecked()
+        signer_email = self.text_input_signer.text()
+        receiver_email = self.text_input.text()
+        encryption = self.checkbox.isChecked()
+        compressed = self.checkbox_comp.isChecked()
+        radix64 = self.checkbox_radix64.isChecked()
+        private_key_sender = None
+        sender_private_key = None
+        public_key_receiver = None
 
-class Window4(QWidget):
+        if signature:
+            passphase = self.text_input_pass.text()
+            private_key_sender = private_key_ring.get_key_by_email(signer_email)
+            # ne postoji taj email
+            if not private_key_sender:
+                self.show_error_message("Za uneti email ne postoji odgovarajući ključ!")
+                return
+            sender_private_key = private_key_sender.decrypt_private_key(private_key_sender.encoded_private_key, passphase)
+
+        if encryption:
+            selected_algo = self.get_selected_radio()
+
+            public_key_receiver = public_key_ring.get_key_by_email(receiver_email)
+
+        message.send_message(signature, encryption, compressed, radix64, selected_algo, message, sender_private_key,
+                             private_key_sender.key_id, public_key_receiver, public_key_receiver.key_id, filepath)
+
+    # If none is checked default is TripleDES
+    def get_selected_radio(self):
+        if self.radio_button1.isChecked():
+            return "TripleDES"
+        elif self.radio_button2.isChecked():
+            return "AES128"
+        else:
+            return "Nijedan"
+
+    def show_error_message(self, message):
+        error_dialog = QMessageBox()
+        error_dialog.setIcon(QMessageBox.Icon.Critical)
+        error_dialog.setWindowTitle("Greška")
+        error_dialog.setText(message)
+        error_dialog.exec()
+
+
+class ReceiveMessageWindow(QWidget):
     def __init__(self, main_window):
         super().__init__()
-        self.setWindowTitle("Prozor 4")
+        self.setWindowTitle("Prijem poruke")
         self.setGeometry(100, 100, 600, 400)
         self.main_window = main_window
 
@@ -242,7 +365,7 @@ class Window4(QWidget):
         self.close()
 
 
-class WindowA(QWidget):
+class KeyImportWindow(QWidget):
     def __init__(self, show_checkbox_label):
         super().__init__()
         self.setWindowTitle("Uvoz ključa")
@@ -274,7 +397,7 @@ class WindowA(QWidget):
         print(f"Uneti tekstovi su: {first_text} i {second_text} i {checkbox}")
 
 
-class WindowB(QWidget):
+class KeyExportWindow(QWidget):
     def __init__(self, show_checkbox_label):
         super().__init__()
         self.setWindowTitle("Izvoz ključa")
@@ -306,7 +429,7 @@ class WindowB(QWidget):
         print(f"Uneti tekstovi su: {first_text} i {second_text} i {checkbox}")
 
 
-class WindowC(QWidget):
+class DeleteKeyWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Obriši ključ")
@@ -331,6 +454,9 @@ class WindowC(QWidget):
 
 
 if __name__ == "__main__":
+    private_key_ring = PrivateKeyRing()
+    public_key_ring = PublicKeyRing()
+    message = Message()
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

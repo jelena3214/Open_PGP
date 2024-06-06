@@ -23,12 +23,11 @@ class PrivateKeyRing:
                 return key
         return None
 
-    def get_keys_by_user_id(self, user_id):
-        user_keys = []
+    def get_key_by_email(self, email) -> PrivateKey:
         for key in self.private_keys:
-            if key.user_id == user_id:
-                user_keys.append(key)
-        return user_keys
+            if key.email == email:
+                return key
+        return None
 
     def get_all_keys(self):
         return self.private_keys

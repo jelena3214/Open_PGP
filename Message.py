@@ -1,7 +1,11 @@
 import secrets
+import string
 from datetime import datetime
+import time
 import zlib
 import base64
+import random
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -14,11 +18,11 @@ class Message:
 
     # signature, encrypted, symmetric_algo, compressed, radix64
     @classmethod
-    def send_message(cls, signed, encrypted, compressed, radix64, symmetric_algo, message_content, sender_private_key,
+    def send_message(cls, signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email, message_content, sender_private_key,
                      sender_key_id, receiver_public_key, receiver_key_id, filepath):
         timestamp = datetime.now()
         # Generate message header
-        header = cls.generate_header(signed, encrypted, compressed, radix64, symmetric_algo)
+        header = cls.generate_header(signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email)
 
         message = str(timestamp) + '\n' + message_content
 
@@ -53,7 +57,7 @@ class Message:
                 session_key = secrets.token_bytes(24)
                 message = cypher.encrypt_cfb64(message, session_key)
 
-            #kriptovan sesisijski kljuc i key id recip
+            # kriptovan sesisijski kljuc i key id recip
             encrypted_ks = receiver_public_key.public_key.encrypt(
                 session_key,
                 padding.OAEP(
@@ -69,20 +73,29 @@ class Message:
             message = cls.encode_radix64(message)
 
         message = header + '\n' + message
+        if filepath == "": filepath = cls.generate_random_filename()
 
-        with open(filepath, "w") as file:
+        with open(filepath + ".txt", "w") as file:
             file.write(message)
 
         return message
 
+    @classmethod
+    def generate_random_filename(cls):
+        timestamp = str(int(time.time()))
+        random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        filename = f"file_{timestamp}_{random_chars}.txt"
+        return filename
 
     @classmethod
     def receive_message(cls):
         pass
 
     @classmethod
-    def generate_header(cls, signed, encrypted, compressed, radix64, symmetric_algo):
-        return (f"Signed:{signed}\n"
+    def generate_header(cls, signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email):
+        return (f"From:{sender_email}\n"
+                f"To:{receiver_email}\n"
+                f"Signed:{signed}\n"
                 f"Encrypted:{encrypted}\n"
                 f"Compressed:{compressed}\n"
                 f"Radix64:{radix64}\n"
@@ -97,7 +110,9 @@ class Message:
             key, value = line.split(":")
             header_dict[key] = value
 
-        return (header_dict.get("Signed"),
+        return (header_dict.get("From"),
+                header_dict.get("To"),
+                header_dict.get("Signed"),
                 header_dict.get("Encrypted"),
                 header_dict.get("Compressed"),
                 header_dict.get("Radix64"),
