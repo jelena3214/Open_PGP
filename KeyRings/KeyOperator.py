@@ -1,7 +1,9 @@
 from cryptography.hazmat.primitives import serialization
 
+
 class KeyOperator:
-    def export_public_key_to_pem(self, public_key, file_path):
+    @classmethod
+    def export_public_key_to_pem(cls, public_key, file_path):
         pem_data = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
@@ -10,7 +12,8 @@ class KeyOperator:
         with open(file_path, 'wb') as pem_file:
             pem_file.write(pem_data)
 
-    def export_private_key_to_pem(self, private_key, file_path):
+    @classmethod
+    def export_private_key_to_pem(cls, private_key, file_path):
         pem_data_private = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -20,7 +23,8 @@ class KeyOperator:
         with open(file_path, 'wb') as pem_file:
             pem_file.write(pem_data_private)
 
-    def import_public_key_from_pem(self, file_path):
+    @classmethod
+    def import_public_key_from_pem(cls, file_path):
         with open(file_path, 'rb') as pem_file:
             pem_data = pem_file.read()
 
@@ -29,6 +33,7 @@ class KeyOperator:
         return public_key
 
     #TODO: Should it be encrypted?
+    @classmethod
     def import_private_key_from_pem(self, file_path):
         with open(file_path, 'rb') as pem_file:
             pem_data = pem_file.read()
@@ -39,3 +44,10 @@ class KeyOperator:
         )
 
         return private_key
+
+    @classmethod
+    def remove_pem_headers(cls, pem_key):
+        lines = pem_key.strip().splitlines()
+        pem_body = ''.join(line for line in lines if not (line.startswith('-----') and line.endswith('-----')))
+        return pem_body
+

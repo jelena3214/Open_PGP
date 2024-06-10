@@ -2,11 +2,12 @@ import sys
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QTableWidget, \
-    QTableWidgetItem, QLabel, QHeaderView, QLineEdit, QCheckBox, QRadioButton, QHBoxLayout, QMessageBox
+    QTableWidgetItem, QLabel, QHeaderView, QLineEdit, QCheckBox, QRadioButton, QHBoxLayout, QMessageBox, QComboBox
 
 from KeyRings.PrivateKeyRing import PrivateKeyRing
 from KeyRings.PublicKeyRing import PublicKeyRing
 from Message import Message
+from AsymmetricEncription.RSAEncryption import RSAEncryption
 
 
 class MainWindow(QMainWindow):
@@ -125,6 +126,45 @@ class PublicKeyRingWindow(QWidget):
         self.close()
 
 
+def initTable(table):
+    table.setColumnCount(6)
+    table.setRowCount(len(private_key_ring.private_keys))
+    headers = ['Timestamp', 'KeyID', 'Public Key', 'Encripted Private Key', 'Name', 'Email']
+    table.setHorizontalHeaderLabels(headers)
+
+    header = table.horizontalHeader()
+    for i in range(len(headers)):
+        header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+        item = table.horizontalHeaderItem(i)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    header.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+
+
+def updateTable(table):
+    table.clearContents()
+    all_data = private_key_ring.get_all_data()
+    table.setRowCount(len(all_data))
+    for row_idx in range(len(all_data)):
+        private_key = all_data[row_idx]
+        print(private_key.name)
+        table.setItem(row_idx, 0, QTableWidgetItem(str(private_key.timestamp)))
+        table.setItem(row_idx, 1, QTableWidgetItem(private_key.key_id))
+        table.setItem(row_idx, 2, QTableWidgetItem(str(private_key.public_key_as_string())))
+        table.setItem(row_idx, 3, QTableWidgetItem(str(private_key.private_key_as_string())))
+        table.setItem(row_idx, 4, QTableWidgetItem(private_key.name))
+        table.setItem(row_idx, 5, QTableWidgetItem(private_key.email))
+
+    # for row_idx, private_key in enumerate(private_key_ring.get_all_data()):
+    #     print("str ovde" + private_key.name)
+    #     table.setItem(row_idx, 0, QTableWidgetItem(str(private_key.timestamp)))
+    #     table.setItem(row_idx, 1, QTableWidgetItem(private_key.key_id))
+    #     table.setItem(row_idx, 2, QTableWidgetItem(str(private_key.public_key_as_string())))
+    #     table.setItem(row_idx, 3, QTableWidgetItem(str(private_key.private_key_as_string())))
+    #     table.setItem(row_idx, 4, QTableWidgetItem(private_key.name))
+    #     table.setItem(row_idx, 5, QTableWidgetItem(private_key.email))
+
+
 class PrivateKeyRingWindow(QWidget):
     def __init__(self, main_window):
         super().__init__()
@@ -132,44 +172,34 @@ class PrivateKeyRingWindow(QWidget):
         self.setGeometry(100, 100, 900, 400)
         self.main_window = main_window
 
+        public_key, private_key = RSAEncryption.generate_rsa_key_set(1024)
+        private_key_ring.add_new_private_key("lol", "lol", public_key, private_key, "123")
         layout = QVBoxLayout()
 
-        data = [
-            ["Podatak 1", "Podatak 2", "Podatak 3", "Podatak 4", "Podatak 5", "Podatak 6"],
-            ["Podatak 7", "Podatak 8", "Podatak 9", "Podatak 10", "Podatak 11", "Podatak 12"],
-            ["Podatak 13", "Podatak 14", "Podatak 15", "Podatak 16", "Podatak 17", "Podatak 18"],
-        ]
-        table = QTableWidget()
-        table.setColumnCount(6)
-        table.setRowCount(len(data))
-        headers = ['Timestamp', 'KeyID', 'Public Key', 'Encripted Private Key', 'Name', 'Email']
-        table.setHorizontalHeaderLabels(headers)
-
-        header = table.horizontalHeader()
-        for i in range(len(headers)):
-            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
-            item = table.horizontalHeaderItem(i)
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        header.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        for row_idx, row_data in enumerate(data):
-            for col_idx, cell_data in enumerate(row_data):
-                table.setItem(row_idx, col_idx, QTableWidgetItem(cell_data))
-
-        layout.addWidget(table)
-
+        if len(private_key_ring.private_keys):
+            self.table = QTableWidget()
+            initTable(self.table)
+            updateTable(self.table)
+            layout.addWidget(self.table)
+        else:
+            hbox = QHBoxLayout()
+            label = QLabel("Nema privatnih ključeva")
+            hbox.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
+            layout.addLayout(hbox)
         buttonA = QPushButton("Uvezi ključ")
         buttonB = QPushButton("Izvezi ključ")
         buttonC = QPushButton("Obriši ključ")
+        buttonD = QPushButton("Generiši ključ")
 
         buttonA.clicked.connect(self.open_key_import)
         buttonB.clicked.connect(self.open_key_export)
         buttonC.clicked.connect(self.open_delete_key)
+        buttonD.clicked.connect(self.open_key_generate)
 
         layout.addWidget(buttonA)
         layout.addWidget(buttonB)
         layout.addWidget(buttonC)
+        layout.addWidget(buttonD)
 
         back_button = QPushButton("Vrati se na meni")
         back_button.clicked.connect(self.back_to_main)
@@ -189,9 +219,16 @@ class PrivateKeyRingWindow(QWidget):
         self.windowC = DeleteKeyWindow()
         self.windowC.show()
 
+    def open_key_generate(self):
+        self.windowD = KeyGenerateWindow(self)
+        self.windowD.show()
+
     def back_to_main(self):
         self.main_window.show()
         self.close()
+
+    def refresh_window(self):
+        updateTable(self.table)
 
 
 class SendMessageWindow(QWidget):
@@ -451,6 +488,62 @@ class DeleteKeyWindow(QWidget):
     def on_confirm(self):
         first_text = self.text_input1.text()
         print(f"Uneti tekstovi su: {first_text}")
+
+
+class KeyGenerateWindow(QWidget):
+
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle("Generiši par ključeva")
+        self.setGeometry(200, 200, 400, 250)
+
+        layout = QVBoxLayout()
+
+        self.name_input = QLineEdit(self)
+        self.name_input.setPlaceholderText("Unesite ime")
+
+        self.email_input = QLineEdit(self)
+        self.email_input.setPlaceholderText("Unesite mejl")
+
+        self.key_size_input = QComboBox(self)
+        self.key_size_input.addItem("1024 bita")
+        self.key_size_input.addItem("2048 bita")
+
+        self.password_input = QLineEdit(self)
+        self.password_input.setPlaceholderText("Unesite lozinku")
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.confirm_button = QPushButton("Potvrdi", self)
+        self.confirm_button.clicked.connect(self.on_confirm)
+
+        layout.addWidget(QLabel("Ime:"))
+        layout.addWidget(self.name_input)
+        layout.addWidget(QLabel("Mejl:"))
+        layout.addWidget(self.email_input)
+        layout.addWidget(QLabel("Veličina ključa:"))
+        layout.addWidget(self.key_size_input)
+        layout.addWidget(QLabel("Lozinka:"))
+        layout.addWidget(self.password_input)
+        layout.addWidget(self.confirm_button)
+
+        self.setLayout(layout)
+
+    def on_confirm(self):
+        name = self.name_input.text()
+        email = self.email_input.text()
+        key_size = int(self.key_size_input.currentText().split()[0])
+        passphrase = self.password_input.text()
+        print(f"Uneti podaci su: Ime: {name}, Mejl: {email}, Veličina ključa: {key_size}, Lozinka: {passphrase}")
+
+        public_key, private_key = RSAEncryption.generate_rsa_key_set(key_size)
+        print(public_key, private_key)
+        private_key_ring.add_new_private_key(name, email, public_key, private_key, passphrase)
+        public_key_ring.add_new_public_key(name, email, public_key)
+        print(private_key_ring.get_all_data())
+        print(f"Uneti podaci su: Ime: {name}, Mejl: {email}, Veličina ključa: {key_size}, Lozinka: {passphrase}")
+        self.parent.refresh_window()
+        self.close()
 
 
 if __name__ == "__main__":

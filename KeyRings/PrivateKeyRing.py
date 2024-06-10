@@ -1,33 +1,28 @@
+from typing import List
+
 from KeyRings.PrivateKey import PrivateKey
 
 
 class PrivateKeyRing:
     def __init__(self):
-        self.private_keys = []
+        self.private_keys = {}
 
     def add_new_private_key(self, name, email, public_key, private_key, passphrase):
         new_key = PrivateKey(name, email, passphrase, public_key, private_key)
-        self.private_keys.append(new_key)
+        self.private_keys[new_key.key_id] = new_key
 
     def delete_private_key(self, key_id):
-        for key in self.private_keys:
-            if key.key_id == key_id:
-                self.private_keys.remove(key)
+        if key_id in self.private_keys:
+            del self.private_keys[key_id]
 
-    def get_key_by_key_id(self, key_id):
-        if key_id == 0 and len(self.private_keys) > 0:
-            return self.private_keys[0]
-
-        for key in self.private_keys:
-            if key.key_id == key_id:
-                return key
-        return None
+    def get_key_by_key_id(self, key_id) -> PrivateKey:
+        return self.private_keys.get(key_id)
 
     def get_key_by_email(self, email) -> PrivateKey:
-        for key in self.private_keys:
+        for key in self.private_keys.values():
             if key.email == email:
                 return key
         return None
 
-    def get_all_keys(self):
-        return self.private_keys
+    def get_all_data(self) -> List[PrivateKey]:
+        return list(self.private_keys.values())
