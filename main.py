@@ -63,33 +63,23 @@ class PublicKeyRingWindow(QWidget):
         self.setWindowTitle("Prsten javnih ključeva")
         self.setGeometry(100, 100, 600, 400)
         self.main_window = main_window
+        self.headers = ['Timestamp', 'KeyID', 'Public Key', 'Name', 'Email']
 
         layout = QVBoxLayout()
 
-        data = [
-            ["Podatak 1", "Podatak 2", "Podatak 3", "Podatak 4", "Podatak 5"],
-            ["Podatak 6", "Podatak 7", "Podatak 8", "Podatak 9", "Podatak 10"],
-            ["Podatak 11", "Podatak 12", "Podatak 13", "Podatak 14", "Podatak 15"],
-        ]
-        table = QTableWidget()
-        table.setColumnCount(5)
-        table.setRowCount(len(data))
-        headers = ['Timestamp', 'KeyID', 'Public Key', 'Name', 'Email']
-        table.setHorizontalHeaderLabels(headers)
+        num_of_public_ring_keys = len(public_key_ring.public_keys)
 
-        header = table.horizontalHeader()
-        for i in range(len(headers)):
-            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
-            item = table.horizontalHeaderItem(i)
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        header.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        for row_idx, row_data in enumerate(data):
-            for col_idx, cell_data in enumerate(row_data):
-                table.setItem(row_idx, col_idx, QTableWidgetItem(cell_data))
-
-        layout.addWidget(table)
+        if num_of_public_ring_keys:
+            self.table = QTableWidget()
+            initTable(self.table, column_count=len(self.headers), row_count=num_of_public_ring_keys,
+                      headers=self.headers)
+            updatePublicRingTable(self.table)
+            layout.addWidget(self.table)
+        else:
+            hbox = QHBoxLayout()
+            label = QLabel("Nema javnih ključeva")
+            hbox.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
+            layout.addLayout(hbox)
 
         buttonA = QPushButton("Uvezi ključ")
         buttonB = QPushButton("Izvezi ključ")
@@ -126,10 +116,9 @@ class PublicKeyRingWindow(QWidget):
         self.close()
 
 
-def initTable(table):
-    table.setColumnCount(6)
-    table.setRowCount(len(private_key_ring.private_keys))
-    headers = ['Timestamp', 'KeyID', 'Public Key', 'Encripted Private Key', 'Name', 'Email']
+def initTable(table, column_count, row_count, headers):
+    table.setColumnCount(column_count)
+    table.setRowCount(row_count)
     table.setHorizontalHeaderLabels(headers)
 
     header = table.horizontalHeader()
@@ -141,28 +130,29 @@ def initTable(table):
     header.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
 
 
-def updateTable(table):
+def updateRingTable(table, data, columns):
     table.clearContents()
-    all_data = private_key_ring.get_all_data()
-    table.setRowCount(len(all_data))
-    for row_idx in range(len(all_data)):
-        private_key = all_data[row_idx]
-        print(private_key.name)
-        table.setItem(row_idx, 0, QTableWidgetItem(str(private_key.timestamp)))
-        table.setItem(row_idx, 1, QTableWidgetItem(private_key.key_id))
-        table.setItem(row_idx, 2, QTableWidgetItem(str(private_key.public_key_as_string())))
-        table.setItem(row_idx, 3, QTableWidgetItem(str(private_key.private_key_as_string())))
-        table.setItem(row_idx, 4, QTableWidgetItem(private_key.name))
-        table.setItem(row_idx, 5, QTableWidgetItem(private_key.email))
+    table.setRowCount(len(data))
 
-    # for row_idx, private_key in enumerate(private_key_ring.get_all_data()):
-    #     print("str ovde" + private_key.name)
-    #     table.setItem(row_idx, 0, QTableWidgetItem(str(private_key.timestamp)))
-    #     table.setItem(row_idx, 1, QTableWidgetItem(private_key.key_id))
-    #     table.setItem(row_idx, 2, QTableWidgetItem(str(private_key.public_key_as_string())))
-    #     table.setItem(row_idx, 3, QTableWidgetItem(str(private_key.private_key_as_string())))
-    #     table.setItem(row_idx, 4, QTableWidgetItem(private_key.name))
-    #     table.setItem(row_idx, 5, QTableWidgetItem(private_key.email))
+    for row_idx, key in enumerate(data):
+        for col_idx, col_name in enumerate(columns):
+            if callable(getattr(key, col_name)):
+                value = getattr(key, col_name)()
+            else:
+                value = getattr(key, col_name)
+            table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
+
+
+def updatePrivateRingTable(table):
+    all_data = private_key_ring.get_all_data()
+    columns = ['timestamp', 'key_id', 'public_key_as_string', 'private_key_as_string', 'name', 'email']
+    updateRingTable(table, all_data, columns)
+
+
+def updatePublicRingTable(table):
+    all_data = public_key_ring.get_all_data()
+    columns = ['timestamp', 'key_id', 'public_key_as_string', 'name', 'email']
+    updateRingTable(table, all_data, columns)
 
 
 class PrivateKeyRingWindow(QWidget):
@@ -171,21 +161,26 @@ class PrivateKeyRingWindow(QWidget):
         self.setWindowTitle("Prsten privatnih ključeva")
         self.setGeometry(100, 100, 900, 400)
         self.main_window = main_window
+        self.headers = ['Timestamp', 'KeyID', 'Public Key', 'Encripted Private Key', 'Name', 'Email']
 
         public_key, private_key = RSAEncryption.generate_rsa_key_set(1024)
         private_key_ring.add_new_private_key("lol", "lol", public_key, private_key, "123")
+
         layout = QVBoxLayout()
 
-        if len(private_key_ring.private_keys):
+        num_of_private_ring_keys = len(private_key_ring.private_keys)
+
+        if num_of_private_ring_keys:
             self.table = QTableWidget()
-            initTable(self.table)
-            updateTable(self.table)
+            initTable(self.table, column_count=len(self.headers), row_count=num_of_private_ring_keys, headers=self.headers)
+            updatePrivateRingTable(self.table)
             layout.addWidget(self.table)
         else:
             hbox = QHBoxLayout()
             label = QLabel("Nema privatnih ključeva")
             hbox.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
             layout.addLayout(hbox)
+
         buttonA = QPushButton("Uvezi ključ")
         buttonB = QPushButton("Izvezi ključ")
         buttonC = QPushButton("Obriši ključ")
@@ -228,7 +223,7 @@ class PrivateKeyRingWindow(QWidget):
         self.close()
 
     def refresh_window(self):
-        updateTable(self.table)
+        updatePrivateRingTable(self.table)
 
 
 class SendMessageWindow(QWidget):
@@ -349,7 +344,8 @@ class SendMessageWindow(QWidget):
             if not private_key_sender:
                 self.show_error_message("Za uneti email ne postoji odgovarajući ključ!")
                 return
-            sender_private_key = private_key_sender.decrypt_private_key(private_key_sender.encoded_private_key, passphase)
+            sender_private_key = private_key_sender.decrypt_private_key(private_key_sender.encoded_private_key,
+                                                                        passphase)
 
         if encryption:
             selected_algo = self.get_selected_radio()

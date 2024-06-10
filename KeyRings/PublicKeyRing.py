@@ -1,3 +1,5 @@
+from typing import List
+
 from KeyRings.PublicKey import PublicKey
 
 
@@ -14,7 +16,7 @@ class PublicKeyRing:
             del self.public_keys[key_id]
 
     def get_key_by_key_id(self, key_id):
-        return self.private_keys.get(key_id)
+        return self.public_keys.get(key_id)
 
     def get_key_by_email(self, email) -> PublicKey:
         for key in self.public_keys.values():
@@ -22,5 +24,5 @@ class PublicKeyRing:
                 return key
         return None
 
-    def get_all_keys(self):
+    def get_all_data(self) -> List[PublicKey]:
         return list(self.public_keys.values())

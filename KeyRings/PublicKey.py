@@ -16,7 +16,7 @@ class PublicKey:
                                                  format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
         self.key_id = public_key_hex[-16:]
 
-    def public_key_to_string(self):
+    def public_key_as_string(self):
         public_key_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
