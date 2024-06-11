@@ -1,3 +1,4 @@
+import ast
 import secrets
 import string
 from datetime import datetime
@@ -6,46 +7,62 @@ import zlib
 import base64
 import random
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
+from KeyRings.PrivateKey import PrivateKey
+from KeyRings.PrivateKeyRing import PrivateKeyRing
+from KeyRings.PublicKey import PublicKey
+from KeyRings.PublicKeyRing import PublicKeyRing
 from SymmetricEncryption.AES128 import AES128
 from SymmetricEncryption.TripleDES import TripleDES
+from UI.ErrorDialog import show_error_message
 
 
 class Message:
 
     # signature, encrypted, symmetric_algo, compressed, radix64
     @classmethod
-    def send_message(cls, signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email, message_content, sender_private_key,
-                     sender_key_id, receiver_public_key, receiver_key_id, filepath):
+    def send_message(cls, signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email,
+                     message_content, sender_decrypted_private_key, private_key_sender: PrivateKey,
+                     receiver_public_key: PublicKey, filepath):
+        if private_key_sender:
+            sender_key_id = private_key_sender.key_id
+
+        if receiver_public_key:
+            receiver_key_id = receiver_public_key.key_id
+
         timestamp = datetime.now()
         # Generate message header
-        header = cls.generate_header(signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email)
+        header = cls.generate_header(signed, encrypted, compressed, radix64, symmetric_algo, sender_email,
+                                     receiver_email)
 
         message = str(timestamp) + '\n' + message_content
 
         # Signature
         if signed:
-            data = f"{message}{timestamp}".encode('utf-8')
+            data = f"{message_content}{timestamp}".encode('utf-8')
 
             digest = hashes.Hash(hashes.SHA1(), backend=default_backend())
             digest.update(data)
             hash_value = digest.finalize()
-            leading_two_octates = hash_value[0:2]
+            leading_two_octets = hash_value[0:2]
 
-            signature = sender_private_key.sign(
+            signature = sender_decrypted_private_key.sign(
                 hash_value,
                 padding.PKCS1v15(),
                 hashes.SHA1()
             )
 
-            message += str(timestamp) + '\n' + str(sender_key_id) + '\n' + str(leading_two_octates) + '\n' + str(
-                signature) + '\n'
+            message += '\n' + str(signature) + '\n' + str(leading_two_octets) + '\n' + str(sender_key_id) + '\n' + str(
+                timestamp) + '\n'
 
         if compressed:
             message = zlib.compress(message.encode('utf-8'))
+        else:
+            message = message.encode('utf-8')
 
         if encrypted:
             if symmetric_algo == 'AES128':
@@ -67,7 +84,7 @@ class Message:
                 )
             )
 
-            message += str(encrypted_ks) + '\n' + str(receiver_key_id)
+            message = str(receiver_key_id) + '\n' + str(encrypted_ks) + '\n' + str(message)
 
         if radix64:
             message = cls.encode_radix64(message)
@@ -86,10 +103,6 @@ class Message:
         random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         filename = f"file_{timestamp}_{random_chars}.txt"
         return filename
-
-    @classmethod
-    def receive_message(cls):
-        pass
 
     @classmethod
     def generate_header(cls, signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email):
@@ -112,10 +125,10 @@ class Message:
 
         return (header_dict.get("From"),
                 header_dict.get("To"),
-                header_dict.get("Signed"),
-                header_dict.get("Encrypted"),
-                header_dict.get("Compressed"),
-                header_dict.get("Radix64"),
+                bool(header_dict.get("Signed")),
+                bool(header_dict.get("Encrypted")),
+                bool(header_dict.get("Compressed")),
+                bool(header_dict.get("Radix64")),
                 header_dict.get("Algo"))
 
     @classmethod
@@ -133,3 +146,103 @@ class Message:
         decoded_string = decoded_data.decode('utf-8')
 
         return decoded_string
+
+    @classmethod
+    def get_passphase_for_receiving(cls, filepath, private_key_ring: PrivateKeyRing):
+        with open(filepath, 'r') as file:
+            message = file.read()
+
+        header_lines = message.splitlines()
+        header = "\n".join(header_lines[:-1])
+        sender, receiver, signed, encrypted, compressed, radix64, algo = cls.parse_header(header)
+
+        message = header_lines[-1]
+
+        if radix64:
+            message = cls.decode_radix64(message)
+
+        receiver_private_key = None
+        encrypted_ks_str = None
+        if encrypted:
+            receiver_key_id_str, encrypted_ks_str, message = message.rsplit('\n', 2)
+            receiver_private_key = private_key_ring.get_key_by_key_id(receiver_key_id_str)
+
+        return encrypted, receiver_private_key, message, encrypted_ks_str, algo, compressed, signed, encrypted, sender, receiver
+
+    @classmethod
+    def receive_message(cls, message, passphrase, receiver_key: PrivateKey, encrypted_ks_str,
+                        public_key_ring: PublicKeyRing, algo, compressed, signed, encrypted):
+
+        # iz str u bytes
+        message = bytes(ast.literal_eval(message))
+
+        if encrypted:
+            receiver_private_key = receiver_key.decrypt_private_key(passphrase)
+            encrypted_session_key = bytes(ast.literal_eval(encrypted_ks_str))
+            session_key = receiver_private_key.decrypt(
+                encrypted_session_key,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
+            )
+
+            if algo == 'AES128':
+                cypher = AES128()
+                message = cypher.decrypt_cfb64(message, session_key)
+            else:
+                cypher = TripleDES()
+                message = cypher.decrypt_cfb64(message, session_key)
+
+        if compressed:
+            message = zlib.decompress(message).decode('utf-8')
+        else:
+            message = message.decode('utf-8')
+
+        if signed:
+            parts = message.split('\n')
+
+            message_timestamp = parts[0]
+            message_content = parts[1]
+
+            signature_str = parts[2]
+            signature = bytes(ast.literal_eval(signature_str))
+            leading_two_octets_str = parts[3]
+            leading_two_octets = bytes(ast.literal_eval(leading_two_octets_str))
+            sender_key_id = parts[4]
+            signature_timestamp = parts[5]
+
+            sender_key_pair = public_key_ring.get_key_by_key_id(sender_key_id)
+
+            #TODO proveri da li ovo radi ovako
+            if sender_key_pair is None:
+                show_error_message("Fajl ne postoji!")
+                return
+
+            data = f"{message_content}{signature_timestamp}".encode('utf-8')
+
+            digest = hashes.Hash(hashes.SHA1(), backend=default_backend())
+            digest.update(data)
+            hash_value = digest.finalize()
+            leading_two_octets_received = hash_value[0:2]
+
+            if leading_two_octets_received != leading_two_octets:
+                print('Vrednost okteta se ne poklapa!')
+            try:
+                sender_key_pair.public_key.verify(
+                    signature,
+                    hash_value,
+                    padding.PKCS1v15(),
+                    hashes.SHA1()
+                )
+            except InvalidSignature:
+                print("Signature verification failed.")
+        else:
+            parts = message.split('\n')
+
+            message_timestamp = parts[0]
+            message_content = parts[1]
+
+        return (f"Timestamp:{message_timestamp}\n"
+                f"Content:{message_content}")

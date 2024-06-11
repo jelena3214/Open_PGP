@@ -105,7 +105,7 @@ class SendMessageWindow(QWidget):
     def send_message(self):
         filepath = self.text_input_filepath.text()
         selected_algo = ""
-        message = self.text_input_message.text()
+        msg = self.text_input_message.text()
         signature = self.checkbox_sign.isChecked()
         signer_email = self.text_input_signer.text()
         receiver_email = self.text_input.text()
@@ -123,15 +123,15 @@ class SendMessageWindow(QWidget):
             if not private_key_sender:
                 show_error_message("Za uneti email ne postoji odgovarajući ključ!")
                 return
-            sender_private_key = private_key_sender.decrypt_private_key_der(passphrase)
+            sender_private_key = private_key_sender.decrypt_private_key(passphrase)
 
         if encryption:
             selected_algo = self.get_selected_radio()
 
             public_key_receiver = context.public_key_ring.get_key_by_email(receiver_email)
 
-        message.send_message(signature, encryption, compressed, radix64, selected_algo, message, sender_private_key,
-                             private_key_sender.key_id, public_key_receiver, public_key_receiver.key_id, filepath)
+        context.message.send_message(signature, encryption, compressed, radix64, selected_algo, signer_email, receiver_email,
+                             msg, sender_private_key, private_key_sender, public_key_receiver, filepath)
 
     # If none is checked default is TripleDES
     def get_selected_radio(self):
