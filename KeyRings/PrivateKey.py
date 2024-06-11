@@ -44,13 +44,25 @@ class PrivateKey:
     def private_key_as_string(self):
         return binascii.hexlify(self.encoded_private_key).decode('utf-8')
 
-    @classmethod
-    def decrypt_private_key(cls, encrypted_private_key, passphrase):
-        passphrase_bytes = passphrase.encode('utf-8')
-        sha1_hash = hashlib.sha1(passphrase_bytes).hexdigest()
-        cast_key = sha1_hash[:16]
-        cipher = CAST.new(cast_key, CAST.MODE_ECB)
-        decrypted_private_key_padded = cipher.decrypt(encrypted_private_key)
-        decrypted_private_key = unpad(decrypted_private_key_padded, 8)
+    def decrypt_private_key_der(self, passphrase):
+        try:
+            passphrase_bytes = passphrase.encode('utf-8')
+            sha1_hash = hashlib.sha1(passphrase_bytes).digest()
+            cast_key = sha1_hash[:16]
+            cipher = CAST.new(cast_key, CAST.MODE_ECB)
+            decrypted_private_key_padded = cipher.decrypt(self.encoded_private_key)
+            decrypted_private_key_der = unpad(decrypted_private_key_padded, 8)
 
-        return decrypted_private_key
+            return decrypted_private_key_der
+        except:
+            decrypted_private_key_der = None
+
+    def decrypt_private_key(self, passphrase):
+        decrypted_private_key_der = self.decrypt_private_key_der(passphrase)
+        if decrypted_private_key_der is None:
+            return None
+
+        return serialization.load_der_private_key(
+            data=decrypted_private_key_der,
+            password=None
+        )

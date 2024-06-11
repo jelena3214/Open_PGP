@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QCheckBox, QRadioButton, QHBoxLayout, QMessageBox
 
 import context
+from UI.ErrorDialog import show_error_message
 
 
 class SendMessageWindow(QWidget):
@@ -33,9 +34,10 @@ class SendMessageWindow(QWidget):
         layout.addWidget(self.checkbox_sign)
 
         text_layout = QHBoxLayout()
-        text_label = QLabel("Passphase:")
+        text_label = QLabel("Šifra tajnog ključa:")
         self.text_input_pass = QLineEdit()
         self.text_input_pass.setEnabled(False)
+        self.text_input_pass.setEchoMode(QLineEdit.EchoMode.Password)
         text_layout.addWidget(text_label)
         text_layout.addWidget(self.text_input_pass)
 
@@ -115,14 +117,13 @@ class SendMessageWindow(QWidget):
         public_key_receiver = None
 
         if signature:
-            passphase = self.text_input_pass.text()
+            passphrase = self.text_input_pass.text()
             private_key_sender = context.private_key_ring.get_key_by_email(signer_email)
             # ne postoji taj email
             if not private_key_sender:
-                self.show_error_message("Za uneti email ne postoji odgovarajući ključ!")
+                show_error_message("Za uneti email ne postoji odgovarajući ključ!")
                 return
-            sender_private_key = private_key_sender.decrypt_private_key(private_key_sender.encoded_private_key,
-                                                                        passphase)
+            sender_private_key = private_key_sender.decrypt_private_key_der(passphrase)
 
         if encryption:
             selected_algo = self.get_selected_radio()
@@ -140,11 +141,3 @@ class SendMessageWindow(QWidget):
             return "AES128"
         else:
             return "Nijedan"
-
-    def show_error_message(self, message):
-        error_dialog = QMessageBox()
-        error_dialog.setIcon(QMessageBox.Icon.Critical)
-        error_dialog.setWindowTitle("Greška")
-        error_dialog.setText(message)
-        error_dialog.exec()
-

@@ -37,8 +37,8 @@ class PublicKeyRingWindow(QWidget):
             hbox.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
             layout.addLayout(hbox)
 
-        button1 = QPushButton("Uvezi ključ")
-        button2 = QPushButton("Izvezi ključ")
+        button1 = QPushButton("Uvezi javni ključ")
+        button2 = QPushButton("Izvezi javni ključ")
         button3 = QPushButton("Obriši ključ")
 
         button1.clicked.connect(self.open_key_import)

@@ -42,10 +42,10 @@ class PrivateKeyRingWindow(QWidget):
             hbox.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
             layout.addLayout(hbox)
 
-        button1 = QPushButton("Uvezi ključ")
-        button2 = QPushButton("Izvezi ključ")
-        button3 = QPushButton("Obriši ključ")
-        button4 = QPushButton("Generiši ključ")
+        button1 = QPushButton("Uvezi par ključeva")
+        button2 = QPushButton("Izvezi par ključeva")
+        button3 = QPushButton("Obriši par ključeva")
+        button4 = QPushButton("Generiši par ključeva")
 
         button1.clicked.connect(self.open_key_import)
         button2.clicked.connect(self.open_key_export)

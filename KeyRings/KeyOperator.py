@@ -13,15 +13,24 @@ class KeyOperator:
             pem_file.write(pem_data)
 
     @classmethod
-    def export_private_key_to_pem(cls, private_key, file_path):
+    def export_key_set_to_pem(cls, private_key_struct, passphrase, file_path):
+        private_key = private_key_struct.decrypt_private_key(passphrase)
+        if private_key is None:
+            return False
+
+        public_key = private_key_struct.public_key
+        cls.export_public_key_to_pem(public_key, file_path)
+
         pem_data_private = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption()
         )
 
-        with open(file_path, 'wb') as pem_file:
+        with open(file_path, 'ab') as pem_file:
             pem_file.write(pem_data_private)
+
+        return True
 
     @classmethod
     def import_public_key_from_pem(cls, file_path):
