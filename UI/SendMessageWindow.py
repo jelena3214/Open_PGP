@@ -125,10 +125,18 @@ class SendMessageWindow(QWidget):
                 return
             sender_private_key = private_key_sender.decrypt_private_key(passphrase)
 
+            if not sender_private_key:
+                show_error_message("Uneti passphrase nije dobar!")
+                return
+
         if encryption:
             selected_algo = self.get_selected_radio()
 
             public_key_receiver = context.public_key_ring.get_key_by_email(receiver_email)
+
+            if not public_key_receiver:
+                show_error_message("Nepoznata uneta email adresa primaoca!")
+                return
 
         context.message.send_message(signature, encryption, compressed, radix64, selected_algo, signer_email, receiver_email,
                              msg, sender_private_key, private_key_sender, public_key_receiver, filepath)
