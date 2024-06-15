@@ -27,7 +27,7 @@ class KeyExportWindow(QWidget):
         self.input_passphrase.setEchoMode(QLineEdit.EchoMode.Password)
         self.input_passphrase.setEnabled(False)
         passphrase_warning = QLabel(
-            "Upozorenje: pogrešna šifra rezultovaće u nepopravljivo pogrešnom privatnom ključu."
+            "Upozorenje: pogrešna šifra rezultovaće potencijalno u nepopravljivo pogrešnom privatnom ključu."
         )
         passphrase_layout.addWidget(passphrase_label)
         passphrase_layout.addWidget(self.input_passphrase)
@@ -67,7 +67,10 @@ class KeyExportWindow(QWidget):
                 )
                 return
             passphrase = self.input_passphrase.text()
-            if not KeyOperator.export_key_set_to_pem(private_key_struct, passphrase, filename):
+            if not KeyOperator.export_key_set_to_pem(
+                    private_key_struct,
+                    passphrase,
+                    filename):
                 show_error_message("Neuspešan izvoz, problem sa šifrom!")
                 return
         else:
@@ -76,6 +79,16 @@ class KeyExportWindow(QWidget):
             if not public_key_struct:
                 show_error_message("Za uneti ID ne postoji odgovarajući javni ključ!")
                 return
-            KeyOperator.export_public_key_to_pem(public_key_struct.public_key, filename)
+            timestamp = public_key_struct.timestamp
+            email = public_key_struct.email
+            name = public_key_struct.name
+            key_id = public_key_struct.key_id
+            KeyOperator.export_public_key_to_pem(
+                timestamp,
+                email,
+                name,
+                key_id,
+                public_key_struct.public_key,
+                filename)
 
         self.close()

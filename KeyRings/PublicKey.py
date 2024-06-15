@@ -1,4 +1,3 @@
-import hashlib
 from datetime import datetime
 from cryptography.hazmat.primitives import serialization
 
@@ -7,8 +6,11 @@ from KeyRings.KeyOperator import KeyOperator
 
 class PublicKey:
 
-    def __init__(self, public_key, name, email):
-        self.timestamp = datetime.now()
+    def __init__(self, public_key, name, email, timestamp=None):
+        if timestamp:
+            self.timestamp = timestamp
+        else:
+            self.timestamp = datetime.now()
         self.public_key = public_key
         self.email = email
         self.name = name

@@ -7,8 +7,8 @@ class PrivateKeyRing:
     def __init__(self):
         self.private_keys = {}
 
-    def add_new_private_key(self, name, email, public_key, private_key, passphrase):
-        new_key = PrivateKey(name, email, passphrase, public_key, private_key)
+    def add_new_private_key(self, name, email, public_key, private_key, passphrase, timestamp=None):
+        new_key = PrivateKey(name, email, passphrase, public_key, private_key, timestamp)
         self.private_keys[new_key.key_id] = new_key
 
     def delete_private_key(self, key_id):

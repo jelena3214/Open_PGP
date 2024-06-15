@@ -11,8 +11,11 @@ from KeyRings.KeyOperator import KeyOperator
 
 class PrivateKey:
 
-    def __init__(self, name, email, passphrase, public_key, private_key):
-        self.timestamp = datetime.now()
+    def __init__(self, name, email, passphrase, public_key, private_key, timestamp=None):
+        if timestamp:
+            self.timestamp = timestamp
+        else:
+            self.timestamp = datetime.now()
         self.public_key = public_key
         public_key_hex = public_key.public_bytes(encoding=serialization.Encoding.DER,
                                                  format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
@@ -44,7 +47,7 @@ class PrivateKey:
     def private_key_as_string(self):
         return binascii.hexlify(self.encoded_private_key).decode('utf-8')
 
-    def decrypt_private_key_der(self, passphrase):
+    def decrypt_private_key(self, passphrase):
         try:
             passphrase_bytes = passphrase.encode('utf-8')
             sha1_hash = hashlib.sha1(passphrase_bytes).digest()
@@ -53,16 +56,9 @@ class PrivateKey:
             decrypted_private_key_padded = cipher.decrypt(self.encoded_private_key)
             decrypted_private_key_der = unpad(decrypted_private_key_padded, 8)
 
-            return decrypted_private_key_der
+            return serialization.load_der_private_key(
+                data=decrypted_private_key_der,
+                password=None
+            )
         except:
-            decrypted_private_key_der = None
-
-    def decrypt_private_key(self, passphrase):
-        decrypted_private_key_der = self.decrypt_private_key_der(passphrase)
-        if decrypted_private_key_der is None:
             return None
-
-        return serialization.load_der_private_key(
-            data=decrypted_private_key_der,
-            password=None
-        )

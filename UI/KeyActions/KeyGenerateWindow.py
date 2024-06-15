@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit
 
 from AsymmetricEncription.RSAEncryption import RSAEncryption
 import context
+from UI.ErrorDialog import show_error_message
 
 
 class KeyGenerateWindow(QWidget):
@@ -9,7 +10,7 @@ class KeyGenerateWindow(QWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
-        self.setWindowTitle("Generiši par ključeva")
+        self.setWindowTitle("Generisanje para ključeva")
         self.setGeometry(200, 200, 400, 250)
 
         layout = QVBoxLayout()
@@ -24,10 +25,13 @@ class KeyGenerateWindow(QWidget):
         self.key_size_input.addItem("1024 bita")
         self.key_size_input.addItem("2048 bita")
 
-        self.password_input = QLineEdit(self)
-        self.password_input.setPlaceholderText("Unesite lozinku")
-        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-
+        self.passphrase_input = QLineEdit(self)
+        self.passphrase_input.setPlaceholderText("Unesite lozinku")
+        self.passphrase_input.setEchoMode(QLineEdit.EchoMode.Password)
+        passphrase_warning = QLabel(
+            "Upozorenje: Upamtite ovu šifru!"
+        )
+        
         self.confirm_button = QPushButton("Potvrdi", self)
         self.confirm_button.clicked.connect(self.on_confirm)
 
@@ -38,7 +42,8 @@ class KeyGenerateWindow(QWidget):
         layout.addWidget(QLabel("Veličina ključa:"))
         layout.addWidget(self.key_size_input)
         layout.addWidget(QLabel("Lozinka:"))
-        layout.addWidget(self.password_input)
+        layout.addWidget(self.passphrase_input)
+        layout.addWidget(passphrase_warning)
         layout.addWidget(self.confirm_button)
 
         self.setLayout(layout)
@@ -47,14 +52,14 @@ class KeyGenerateWindow(QWidget):
         name = self.name_input.text()
         email = self.email_input.text()
         key_size = int(self.key_size_input.currentText().split()[0])
-        passphrase = self.password_input.text()
-        print(f"Uneti podaci su: Ime: {name}, Mejl: {email}, Veličina ključa: {key_size}, Lozinka: {passphrase}")
+        passphrase = self.passphrase_input.text()
 
         public_key, private_key = RSAEncryption.generate_rsa_key_set(key_size)
-        print(public_key, private_key)
+        if not context.public_key_ring.add_new_public_key(name, email, public_key):
+            show_error_message("Već postoji ključ ili par ključeva povezan sa ovim mejlom.")
+            return
+
         context.private_key_ring.add_new_private_key(name, email, public_key, private_key, passphrase)
-        context.public_key_ring.add_new_public_key(name, email, public_key)
-        print(context.private_key_ring.get_all_data())
-        print(f"Uneti podaci su: Ime: {name}, Mejl: {email}, Veličina ključa: {key_size}, Lozinka: {passphrase}")
+
         self.parent.refresh_window()
         self.close()

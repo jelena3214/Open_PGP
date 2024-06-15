@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTableWidget, \
-    QLabel, QHBoxLayout
+    QLabel, QStackedWidget
 
 from UI.KeyActions.KeyDeleteWindow import KeyDeleteWindow
 from UI.KeyActions.KeyExportWindow import KeyExportWindow
@@ -25,17 +25,30 @@ class PublicKeyRingWindow(QWidget):
 
         num_of_public_ring_keys = len(context.public_key_ring.public_keys)
 
-        if num_of_public_ring_keys:
-            self.table = QTableWidget()
-            initTable(self.table, column_count=len(self.headers), row_count=num_of_public_ring_keys,
-                      headers=self.headers)
-            updatePublicRingTable(self.table)
-            layout.addWidget(self.table)
+        self.stacked_widget = QStackedWidget()
+
+        table_widget = QWidget()
+        table_layout = QVBoxLayout()
+        self.table = QTableWidget()
+        initTable(self.table, column_count=len(self.headers), row_count=num_of_public_ring_keys, headers=self.headers)
+        updatePublicRingTable(self.table)
+        table_layout.addWidget(self.table)
+        table_widget.setLayout(table_layout)
+
+        empty_message_widget = QWidget()
+        empty_layout = QVBoxLayout()
+        label = QLabel("Nema javnih ključeva")
+        empty_layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
+        empty_message_widget.setLayout(empty_layout)
+
+        self.stacked_widget.addWidget(table_widget)
+        self.stacked_widget.addWidget(empty_message_widget)
+
+        layout.addWidget(self.stacked_widget)
+        if not num_of_public_ring_keys:
+            self.stacked_widget.setCurrentIndex(1)
         else:
-            hbox = QHBoxLayout()
-            label = QLabel("Nema javnih ključeva")
-            hbox.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
-            layout.addLayout(hbox)
+            self.stacked_widget.setCurrentIndex(0)
 
         button1 = QPushButton("Uvezi javni ključ")
         button2 = QPushButton("Izvezi javni ključ")
@@ -56,17 +69,24 @@ class PublicKeyRingWindow(QWidget):
         self.setLayout(layout)
 
     def open_key_import(self):
-        self.key_import_window = KeyImportWindow(False)
+        self.key_import_window = KeyImportWindow(parent=self, show_include_private_key_option=False)
         self.key_import_window.show()
 
     def open_key_export(self):
-        self.key_export_window = KeyExportWindow(False)
+        self.key_export_window = KeyExportWindow(show_include_private_key_option=False)
         self.key_export_window.show()
 
     def open_key_delete(self):
-        self.key_delete_window = KeyDeleteWindow()
+        self.key_delete_window = KeyDeleteWindow(parent=self)
         self.key_delete_window.show()
 
     def back_to_main(self):
         self.main_window.show()
         self.close()
+
+    def refresh_window(self):
+        if not len(context.public_key_ring.public_keys):
+            self.stacked_widget.setCurrentIndex(1)
+        else:
+            updatePublicRingTable(self.table)
+            self.stacked_widget.setCurrentIndex(0)
