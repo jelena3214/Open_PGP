@@ -133,12 +133,12 @@ class SendMessageWindow(QWidget):
             private_key_sender = context.private_key_ring.get_key_by_email(signer_email)
             # ne postoji taj email
             if not private_key_sender:
-                show_error_message("Za uneti email ne postoji odgovarajući ključ!")
+                show_error_message("Za uneti email ne postoji odgovarajući ključ za potpisivanje!")
                 return
             sender_private_key = private_key_sender.decrypt_private_key(passphrase)
 
             if not sender_private_key:
-                show_error_message("Uneti passphrase nije dobar!")
+                show_error_message("Pogrešna lozinka za dati privatni ključ!")
                 return
 
         if encryption:
@@ -147,11 +147,13 @@ class SendMessageWindow(QWidget):
             public_key_receiver = context.public_key_ring.get_key_by_email(receiver_email)
 
             if not public_key_receiver:
-                show_error_message("Nepoznata uneta email adresa primaoca!")
+                show_error_message(
+                    "Ne postoji potreban ključ iz prstena javnih ključeva za unetu email adresu primaoca!")
                 return
 
-        context.message.send_message(signature, encryption, compressed, radix64, selected_algo, signer_email, receiver_email,
-                             msg, sender_private_key, private_key_sender, public_key_receiver, filepath)
+        context.message.send_message(signature, encryption, compressed, radix64, selected_algo, signer_email,
+                                     receiver_email,
+                                     msg, sender_private_key, private_key_sender, public_key_receiver, filepath)
 
         self.back_to_main()
 

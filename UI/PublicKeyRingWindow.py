@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QTableWidget, \
-    QLabel, QStackedWidget
+    QLabel, QStackedWidget, QApplication
 
 from UI.KeyActions.KeyDeleteWindow import KeyDeleteWindow
 from UI.KeyActions.KeyExportWindow import KeyExportWindow
@@ -66,6 +66,8 @@ class PublicKeyRingWindow(QWidget):
         back_button.clicked.connect(self.back_to_main)
         layout.addWidget(back_button)
 
+        self.closing_by_button = False
+
         self.setLayout(layout)
 
     def open_key_import(self):
@@ -81,6 +83,7 @@ class PublicKeyRingWindow(QWidget):
         self.key_delete_window.show()
 
     def back_to_main(self):
+        self.closing_by_button = True
         self.main_window.show()
         self.close()
 
@@ -90,3 +93,9 @@ class PublicKeyRingWindow(QWidget):
         else:
             updatePublicRingTable(self.table)
             self.stacked_widget.setCurrentIndex(0)
+
+    def closeEvent(self, event):
+        if not self.closing_by_button:
+            QApplication.quit()
+        else:
+            event.accept()

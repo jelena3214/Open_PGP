@@ -29,13 +29,13 @@ class Message:
                      message_content, sender_decrypted_private_key, private_key_sender: PrivateKey,
                      receiver_public_key: PublicKey, filepath):
         timestamp = datetime.now()
+
         # Generate message header
         header = cls.generate_header(signed, encrypted, compressed, radix64, symmetric_algo, sender_email,
                                      receiver_email)
 
         message = str(timestamp) + '\n' + message_content
 
-        # Signature
         if signed:
             timestamp = datetime.now()
             sender_key_id = private_key_sender.key_id
@@ -73,7 +73,6 @@ class Message:
                 session_key = secrets.token_bytes(24)
                 message = cypher.encrypt_cfb64(message, session_key)
 
-            # kriptovan sesisijski kljuc i key id recip
             encrypted_ks = receiver_public_key.public_key.encrypt(
                 session_key,
                 padding.OAEP(
@@ -174,9 +173,9 @@ class Message:
             if encrypted:
                 receiver_private_key = receiver_key.decrypt_private_key(passphrase)
 
-                # TODO ispise se od koga je poruka ali je None sadrzaj
+                # ispise se od koga je poruka ali je None sadrzaj
                 if receiver_private_key is None:
-                    show_error_message("Pogrešan passphrase!")
+                    show_error_message("Pogrešna lozinka za dati privatni ključ!")
                     return
 
                 encrypted_session_key = bytes(ast.literal_eval(encrypted_ks_str))
@@ -217,7 +216,7 @@ class Message:
                 sender_key_pair = public_key_ring.get_key_by_key_id(sender_key_id)
 
                 if sender_key_pair is None:
-                    show_error_message("Nepoznat javni ključ!")
+                    show_error_message("Ne postoji potreban ključ iz prstena javnih ključeva za proveru potpisa poruke!")
                     return
 
                 data = f"{message_content}{signature_timestamp}".encode('utf-8')
@@ -227,9 +226,11 @@ class Message:
                 hash_value = digest.finalize()
                 leading_two_octets_received = hash_value[0:2]
 
-                if leading_two_octets_received != leading_two_octets:
-                    print('Vrednost okteta se ne poklapa!')
                 try:
+                    if leading_two_octets_received != leading_two_octets:
+                        print('Vrednost okteta se ne poklapa!')
+                        raise InvalidSignature
+
                     sender_key_pair.public_key.verify(
                         signature,
                         hash_value,

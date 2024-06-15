@@ -73,7 +73,7 @@ class ReceiveMessageWindow(QWidget):
             passphrase = None
             if encrypted:
                 if receiver_private_key is None:
-                    show_error_message("Ne postoji potreban ključ iz prstena privatnih ključeva!")
+                    show_error_message("Ne postoji potreban ključ iz prstena privatnih ključeva za dekripciju poruke!")
                     return
                 passphrase_dialog = PassphraseDialog(receiver_email)
                 if passphrase_dialog.exec() == QDialog.DialogCode.Accepted:
