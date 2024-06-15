@@ -1,5 +1,7 @@
+import json
 from typing import List
 
+import context
 from KeyRings.PublicKey import PublicKey
 
 
@@ -33,3 +35,16 @@ class PublicKeyRing:
 
     def get_all_data(self) -> List[PublicKey]:
         return list(self.public_keys.values())
+
+    def export_all_public_keys(self, file_path):
+        with open(file_path, 'w') as file:
+            json_data = [pk.to_dict() for pk in self.get_all_data()]
+            json.dump(json_data, file, default=str, indent=4)
+
+    @classmethod
+    def import_all_public_keys(cls, file_path):
+        with open(file_path, 'r') as file:
+            json_data = json.load(file)
+            public_keys = [PublicKey.from_dict(data) for data in json_data]
+        for key in public_keys:
+            context.public_key_ring.public_keys[key.key_id] = key

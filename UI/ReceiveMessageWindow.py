@@ -1,29 +1,38 @@
 import os
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QPushButton, QDialog, \
-    QFileDialog, QMessageBox
+    QMessageBox
 from cryptography.exceptions import InvalidSignature
 
 import context
-from UI.KeyActions.PassphraseDialog import PassphraseDialog
 from UI.ErrorDialog import show_error_message
+from UI.FileDialog import choose_export_file, choose_import_file
+from UI.KeyActions.PassphraseDialog import PassphraseDialog
 
 
 class ReceiveMessageWindow(QWidget):
     def __init__(self, main_window):
         super().__init__()
+        self.print_string = None
         self.setWindowTitle("Prijem poruke")
         self.setGeometry(100, 100, 600, 400)
         self.main_window = main_window
 
         layout = QVBoxLayout()
 
-        text_layout = QHBoxLayout()
+        file_input_layout = QHBoxLayout()
+
         text_label = QLabel("Destinacija fajla:")
-        self.text_input_filepath = QLineEdit()
-        text_layout.addWidget(text_label)
-        text_layout.addWidget(self.text_input_filepath)
-        layout.addLayout(text_layout)
+        layout.addWidget(text_label)
+
+        self.input_filename = QLineEdit(self)
+        self.input_filename.setPlaceholderText("Unesite ime fajla")
+        file_input_layout.addWidget(self.input_filename)
+
+        self.choose_file_button = QPushButton("Izaberite fajl")
+        self.choose_file_button.clicked.connect(self.show_file_dialog)
+        file_input_layout.addWidget(self.choose_file_button)
+        layout.addLayout(file_input_layout)
 
         content_layout = QVBoxLayout()
         self.content_label = QLabel("Sadržaj:")
@@ -52,7 +61,7 @@ class ReceiveMessageWindow(QWidget):
         self.setLayout(layout)
 
     def display_content(self):
-        filepath = self.text_input_filepath.text()
+        filepath = self.input_filename.text()
         if not os.path.exists(filepath):
             show_error_message("Fajl ne postoji!")
             return
@@ -60,7 +69,6 @@ class ReceiveMessageWindow(QWidget):
         try:
             encrypted, receiver_private_key, msg, encrypted_ks_str, algo, comp, sign, encrypted, sender_email, receiver_email = context.message.get_passphase_for_receiving(
                 filepath, context.private_key_ring)
-
 
             passphrase = None
             if encrypted:
@@ -85,8 +93,12 @@ class ReceiveMessageWindow(QWidget):
         self.content_display.setPlainText(self.print_string)
         self.save_button.setEnabled(True)
 
+    def show_file_dialog(self):
+        file_name = choose_import_file(self, "Primanje poruke")
+        self.input_filename.setText(file_name)
+
     def save_message(self):
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save Message", "", "Text Files (*.txt);;All Files (*)")
+        fileName = choose_export_file(self, "Čuvanje poruke")
         if fileName:
             try:
                 with open(fileName, 'w') as file:

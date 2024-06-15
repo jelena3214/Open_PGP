@@ -1,7 +1,8 @@
-from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QCheckBox, QRadioButton, QHBoxLayout, QMessageBox
+from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QCheckBox, QRadioButton, QHBoxLayout
 
 import context
 from UI.ErrorDialog import show_error_message
+from UI.FileDialog import choose_export_file
 
 
 class SendMessageWindow(QWidget):
@@ -71,13 +72,19 @@ class SendMessageWindow(QWidget):
 
         layout.addLayout(text_layout)
 
-        text_layout = QHBoxLayout()
-        text_label = QLabel("Destinacija fajla:")
-        self.text_input_filepath = QLineEdit()
-        text_layout.addWidget(text_label)
-        text_layout.addWidget(self.text_input_filepath)
+        file_input_layout = QHBoxLayout()
 
-        layout.addLayout(text_layout)
+        text_label = QLabel("Destinacija fajla:")
+        layout.addWidget(text_label)
+
+        self.input_filename = QLineEdit(self)
+        self.input_filename.setPlaceholderText("Unesite ime fajla")
+        file_input_layout.addWidget(self.input_filename)
+
+        self.choose_file_button = QPushButton("Izaberite fajl")
+        self.choose_file_button.clicked.connect(self.show_file_dialog)
+        file_input_layout.addWidget(self.choose_file_button)
+        layout.addLayout(file_input_layout)
 
         submit_button = QPushButton("Pošalji")
         submit_button.clicked.connect(self.send_message)
@@ -104,7 +111,7 @@ class SendMessageWindow(QWidget):
         self.close()
 
     def send_message(self):
-        filepath = self.text_input_filepath.text()
+        filepath = self.input_filename.text()
         if filepath == "":
             show_error_message("Naziv fajla je obavezan!")
             return
@@ -156,3 +163,7 @@ class SendMessageWindow(QWidget):
             return "AES128"
         else:
             return "Nijedan"
+
+    def show_file_dialog(self):
+        file_name = choose_export_file(self, "Slanje poruke")
+        self.input_filename.setText(file_name)

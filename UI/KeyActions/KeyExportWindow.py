@@ -1,8 +1,9 @@
-from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QLineEdit, QCheckBox, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QLineEdit, QCheckBox, QHBoxLayout
 
-from KeyRings.KeyOperator import KeyOperator
 import context
+from KeyRings.KeyOperator import KeyOperator
 from UI.ErrorDialog import show_error_message
+from UI.FileDialog import choose_export_file
 
 
 class KeyExportWindow(QWidget):
@@ -15,39 +16,33 @@ class KeyExportWindow(QWidget):
 
         self.input_key_id = QLineEdit(self)
         self.input_key_id.setPlaceholderText("Unesite ID javnog ključa")
+
+        file_input_layout = QHBoxLayout()
+
         self.input_filename = QLineEdit(self)
         self.input_filename.setPlaceholderText("Unesite ime fajla")
+        file_input_layout.addWidget(self.input_filename)
+
+        self.choose_file_button = QPushButton("Izaberite fajl")
+        self.choose_file_button.clicked.connect(self.show_file_dialog)
+        file_input_layout.addWidget(self.choose_file_button)
 
         self.include_private_key_checkbox = QCheckBox("Ceo set ključeva")
-        self.include_private_key_checkbox.stateChanged.connect(self.toggle_passphrase_field)
-
-        passphrase_layout = QHBoxLayout()
-        passphrase_label = QLabel("Šifra tajnog ključa:")
-        self.input_passphrase = QLineEdit()
-        self.input_passphrase.setEchoMode(QLineEdit.EchoMode.Password)
-        self.input_passphrase.setEnabled(False)
-        passphrase_warning = QLabel(
-            "Upozorenje: pogrešna šifra rezultovaće potencijalno u nepopravljivo pogrešnom privatnom ključu."
-        )
-        passphrase_layout.addWidget(passphrase_label)
-        passphrase_layout.addWidget(self.input_passphrase)
 
         self.confirm_button = QPushButton("Potvrdi", self)
         self.confirm_button.clicked.connect(self.on_confirm)
 
         layout.addWidget(self.input_key_id)
-        layout.addWidget(self.input_filename)
+        layout.addLayout(file_input_layout)
         if show_include_private_key_option:
             layout.addWidget(self.include_private_key_checkbox)
-            layout.addLayout(passphrase_layout)
-            layout.addWidget(passphrase_warning)
         layout.addWidget(self.confirm_button)
 
         self.setLayout(layout)
 
-    def toggle_passphrase_field(self):
-        state = self.include_private_key_checkbox.isChecked()
-        self.input_passphrase.setEnabled(state)
+    def show_file_dialog(self):
+        file_name = choose_export_file(self, "Čuvanje ključa")
+        self.input_filename.setText(file_name)
 
     def on_confirm(self):
         key_id = self.input_key_id.text()
@@ -66,13 +61,7 @@ class KeyExportWindow(QWidget):
                     "Za izvoz tuđeg javnog ključa isključite opciju \"Ceo set ključeva\"."
                 )
                 return
-            passphrase = self.input_passphrase.text()
-            if not KeyOperator.export_key_set_to_pem(
-                    private_key_struct,
-                    passphrase,
-                    filename):
-                show_error_message("Neuspešan izvoz, problem sa šifrom!")
-                return
+            KeyOperator.export_key_set_to_pem(private_key_struct, filename)
         else:
             public_key_struct = context.public_key_ring.get_key_by_key_id(key_id)
 
@@ -82,12 +71,10 @@ class KeyExportWindow(QWidget):
             timestamp = public_key_struct.timestamp
             email = public_key_struct.email
             name = public_key_struct.name
-            key_id = public_key_struct.key_id
             KeyOperator.export_public_key_to_pem(
                 timestamp,
                 email,
                 name,
-                key_id,
                 public_key_struct.public_key,
                 filename)
 

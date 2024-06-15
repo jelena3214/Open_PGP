@@ -1,3 +1,5 @@
+import re
+
 from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit, QComboBox
 
 from AsymmetricEncription.RSAEncryption import RSAEncryption
@@ -54,6 +56,14 @@ class KeyGenerateWindow(QWidget):
         key_size = int(self.key_size_input.currentText().split()[0])
         passphrase = self.passphrase_input.text()
 
+        if not name or not email or not key_size or not passphrase:
+            show_error_message("Sva polja su obavezna.")
+            return
+
+        if not self.is_valid_email(email):
+            show_error_message("Mejl adresa nije u validnom formatu.")
+            return
+
         public_key, private_key = RSAEncryption.generate_rsa_key_set(key_size)
         if not context.public_key_ring.add_new_public_key(name, email, public_key):
             show_error_message("Već postoji ključ ili par ključeva povezan sa ovim mejlom.")
@@ -63,3 +73,8 @@ class KeyGenerateWindow(QWidget):
 
         self.parent.refresh_window()
         self.close()
+
+    @classmethod
+    def is_valid_email(cls, email):
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return re.match(pattern, email) is not None

@@ -1,5 +1,7 @@
+import json
 from typing import List
 
+import context
 from KeyRings.PrivateKey import PrivateKey
 
 
@@ -26,3 +28,16 @@ class PrivateKeyRing:
 
     def get_all_data(self) -> List[PrivateKey]:
         return list(self.private_keys.values())
+
+    def export_all_private_keys(self, file_path):
+        with open(file_path, 'w') as file:
+            json_data = [pk.to_dict() for pk in self.get_all_data()]
+            json.dump(json_data, file, default=str, indent=4)
+
+    @classmethod
+    def import_all_private_keys(cls, file_path):
+        with open(file_path, 'r') as file:
+            json_data = json.load(file)
+            private_keys = [PrivateKey.from_dict(data) for data in json_data]
+        for key in private_keys:
+            context.private_key_ring.private_keys[key.key_id] = key

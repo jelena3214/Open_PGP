@@ -1,7 +1,9 @@
 from datetime import datetime
+
 from cryptography.hazmat.primitives import serialization
 
 import context
+from KeyRings.PrivateKey import PrivateKey
 
 
 class KeyOperator:
@@ -30,27 +32,17 @@ class KeyOperator:
             pem_file.write(pem_data)
 
     @classmethod
-    def export_key_set_to_pem(cls, private_key_struct, passphrase, file_path):
-        private_key = private_key_struct.decrypt_private_key(passphrase)
+    def export_key_set_to_pem(cls, private_key_struct, file_path):
+        private_key = private_key_struct.private_key_as_string()
         timestamp = private_key_struct.timestamp
         email = private_key_struct.email
         name = private_key_struct.name
-        if private_key is None:
-            return False
 
         public_key = private_key_struct.public_key
         cls.export_public_key_to_pem(timestamp, email, name, public_key, file_path)
 
-        pem_data_private = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-
         with open(file_path, 'ab') as pem_file:
-            pem_file.write(pem_data_private)
-
-        return True
+            pem_file.write(private_key.encode('utf-8'))
 
     @classmethod
     def import_public_key_from_pem(cls, file_path):
@@ -75,24 +67,18 @@ class KeyOperator:
         return name, email, public_key, timestamp
 
     @classmethod
-    def import_key_set_from_pem(cls, passphrase, file_path):
+    def import_key_set_from_pem(cls, file_path):
+        with open(file_path, 'rb') as pem_file:
+            content = pem_file.read().decode('utf-8')
+
+        private_key_start = content.index('-----END PUBLIC KEY-----') + len('-----END PUBLIC KEY-----\n')
+        private_key_data = content[private_key_start:]
+        assert (len(private_key_data) > 0)
+
         name, email, public_key, timestamp = cls.import_public_key_from_pem(file_path)
         if name is None:
             return False
 
-        with open(file_path, 'rb') as pem_file:
-            content = pem_file.read().decode('utf-8')
-
-        private_key_start = content.index('-----BEGIN RSA PRIVATE KEY-----')
-        private_key_end = content.index('-----END RSA PRIVATE KEY-----') + len('-----END RSA PRIVATE KEY-----')
-        private_key_data = content[private_key_start:private_key_end].encode('utf-8')
-
-        private_key = serialization.load_pem_private_key(private_key_data, password=None)
-        context.private_key_ring.add_new_private_key(name, email, public_key, private_key, passphrase, timestamp)
+        private_key = PrivateKey.string_to_private_key(private_key_data)
+        context.private_key_ring.add_new_private_key(name, email, public_key, private_key, None, timestamp)
         return True
-
-    @classmethod
-    def remove_pem_headers(cls, pem_key):
-        lines = pem_key.strip().splitlines()
-        pem_body = ''.join(line for line in lines if not (line.startswith('-----') and line.endswith('-----')))
-        return pem_body
