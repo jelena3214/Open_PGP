@@ -1,6 +1,7 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QPushButton, QDialog
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QPushButton, QDialog, \
+    QFileDialog, QMessageBox
 from cryptography.exceptions import InvalidSignature
 
 import context
@@ -41,6 +42,11 @@ class ReceiveMessageWindow(QWidget):
         display_button.clicked.connect(self.display_content)
         buttons_layout.addWidget(display_button)
 
+        self.save_button = QPushButton("Sačuvaj poruku")
+        self.save_button.clicked.connect(self.save_message)
+        self.save_button.setEnabled(False)
+        buttons_layout.addWidget(self.save_button)
+
         layout.addLayout(buttons_layout)
 
         self.setLayout(layout)
@@ -74,9 +80,20 @@ class ReceiveMessageWindow(QWidget):
             show_error_message(f"Sadržaj poruke je izmenjen! (Exception: {'{} - {}'.format(type(e).__name__, str(e))})")
             return
 
-        print_string = f"From:{sender_email}\nTo:{receiver_email}\n{message_str}"
+        self.print_string = f"From:{sender_email}\nTo:{receiver_email}\n{message_str}"
 
-        self.content_display.setPlainText(print_string)
+        self.content_display.setPlainText(self.print_string)
+        self.save_button.setEnabled(True)
+
+    def save_message(self):
+        fileName, _ = QFileDialog.getSaveFileName(self, "Save Message", "", "Text Files (*.txt);;All Files (*)")
+        if fileName:
+            try:
+                with open(fileName, 'w') as file:
+                    file.write(self.print_string)
+                QMessageBox.information(self, "Uspeh", f"Poruka sačuvana na putanji {fileName}")
+            except Exception as e:
+                QMessageBox.critical(self, "Greška", f"Greška pri čuvanju poruke: {e}")
 
     def back_to_main(self):
         self.main_window.show()

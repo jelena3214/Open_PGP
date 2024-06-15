@@ -37,6 +37,7 @@ class Message:
 
         # Signature
         if signed:
+            timestamp = datetime.now()
             sender_key_id = private_key_sender.key_id
 
             data = f"{message_content}{timestamp}".encode('utf-8')
@@ -90,19 +91,11 @@ class Message:
             message = cls.encode_radix64(message)
 
         message = header + '\n' + message
-        if filepath == "": filepath = cls.generate_random_filename()
 
-        with open(filepath + ".txt", "w") as file:
+        with open(filepath, "w") as file:
             file.write(message)
 
         return message
-
-    @classmethod
-    def generate_random_filename(cls):
-        timestamp = str(int(time.time()))
-        random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-        filename = f"file_{timestamp}_{random_chars}.txt"
-        return filename
 
     @classmethod
     def generate_header(cls, signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email):

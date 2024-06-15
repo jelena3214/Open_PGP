@@ -92,6 +92,7 @@ class SendMessageWindow(QWidget):
     def toggle_fields(self):
         state = self.checkbox.isChecked()
         self.radio_button1.setEnabled(state)
+        self.radio_button1.setChecked(True)
         self.radio_button2.setEnabled(state)
 
     def toggle_fields_signature(self):
@@ -104,6 +105,10 @@ class SendMessageWindow(QWidget):
 
     def send_message(self):
         filepath = self.text_input_filepath.text()
+        if filepath == "":
+            show_error_message("Naziv fajla je obavezan!")
+            return
+
         selected_algo = ""
         msg = self.text_input_message.text()
         signature = self.checkbox_sign.isChecked()
@@ -140,6 +145,8 @@ class SendMessageWindow(QWidget):
 
         context.message.send_message(signature, encryption, compressed, radix64, selected_algo, signer_email, receiver_email,
                              msg, sender_private_key, private_key_sender, public_key_receiver, filepath)
+
+        self.back_to_main()
 
     # If none is checked default is TripleDES
     def get_selected_radio(self):
