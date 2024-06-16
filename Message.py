@@ -1,11 +1,8 @@
 import ast
 import secrets
-import string
 from datetime import datetime
-import time
 import zlib
 import base64
-import random
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -20,10 +17,24 @@ from SymmetricEncryption.AES128 import AES128
 from SymmetricEncryption.TripleDES import TripleDES
 from UI.ErrorDialog import show_error_message
 
+"""
+Message structure:
+
+Receiver key ID
+Encrypted session key
+Signature Timestamp
+Signer key ID
+Leading two octets of signed hash value
+Signature
+Message Timestamp
+Message Content
+"""
+
+HEADER_LENGTH = 7
+
 
 class Message:
 
-    # signature, encrypted, symmetric_algo, compressed, radix64
     @classmethod
     def send_message(cls, signed, encrypted, compressed, radix64, symmetric_algo, sender_email, receiver_email,
                      message_content, sender_decrypted_private_key, private_key_sender: PrivateKey,
@@ -54,7 +65,7 @@ class Message:
             )
 
             message += '\n' + str(signature) + '\n' + str(leading_two_octets) + '\n' + str(sender_key_id) + '\n' + str(
-                timestamp) + '\n'
+                timestamp)
 
         if compressed:
             message = zlib.compress(message.encode('utf-8'))
@@ -140,15 +151,15 @@ class Message:
         return decoded_string
 
     @classmethod
-    def get_passphase_for_receiving(cls, filepath, private_key_ring: PrivateKeyRing):
+    def parse_received_data(cls, filepath, private_key_ring: PrivateKeyRing):
         with open(filepath, 'r') as file:
             message = file.read()
         try:
             header_lines = message.splitlines()
-            header = "\n".join(header_lines[:7])
+            header = "\n".join(header_lines[:HEADER_LENGTH])
             sender, receiver, signed, encrypted, compressed, radix64, algo = cls.parse_header(header)
 
-            message = "\n".join(header_lines[7:])
+            message = "\n".join(header_lines[HEADER_LENGTH:])
 
             if radix64:
                 message = cls.decode_radix64(message)
@@ -159,7 +170,7 @@ class Message:
                 receiver_key_id_str, encrypted_ks_str, message = message.rsplit('\n', 2)
                 receiver_private_key = private_key_ring.get_key_by_key_id(receiver_key_id_str)
 
-            return encrypted, receiver_private_key, message, encrypted_ks_str, algo, compressed, signed, encrypted, sender, receiver
+            return receiver_private_key, message, encrypted_ks_str, algo, compressed, signed, encrypted, sender, receiver
         except BaseException:
             raise
 
@@ -167,13 +178,13 @@ class Message:
     def receive_message(cls, message, passphrase, receiver_key: PrivateKey, encrypted_ks_str,
                         public_key_ring: PublicKeyRing, algo, compressed, signed, encrypted):
         try:
-            # iz str u bytes
+            # From str to bytes
             message = bytes(ast.literal_eval(message))
 
             if encrypted:
                 receiver_private_key = receiver_key.decrypt_private_key(passphrase)
 
-                # ispise se od koga je poruka ali je None sadrzaj
+                # Message content will be None
                 if receiver_private_key is None:
                     show_error_message("Pogrešna lozinka za dati privatni ključ!")
                     return
@@ -203,21 +214,21 @@ class Message:
             if signed:
                 parts = message.split('\n')
 
-                # on index -1 in empty string because of \n after timestamp
                 message_timestamp = parts[0]
-                message_content = "\n".join(parts[1:-5])
+                message_content = "\n".join(parts[1:-4])
 
-                signature_str = parts[-5]
+                signature_str = parts[-4]
                 signature = bytes(ast.literal_eval(signature_str))
-                leading_two_octets_str = parts[-4]
+                leading_two_octets_str = parts[-3]
                 leading_two_octets = bytes(ast.literal_eval(leading_two_octets_str))
-                sender_key_id = parts[-3]
-                signature_timestamp = parts[-2]
+                sender_key_id = parts[-2]
+                signature_timestamp = parts[-1]
 
                 sender_key_pair = public_key_ring.get_key_by_key_id(sender_key_id)
 
                 if sender_key_pair is None:
-                    show_error_message("Ne postoji potreban ključ iz prstena javnih ključeva za proveru potpisa poruke!")
+                    show_error_message(
+                        "Ne postoji potreban ključ iz prstena javnih ključeva za proveru potpisa poruke!")
                     return
 
                 data = f"{message_content}{signature_timestamp}".encode('utf-8')

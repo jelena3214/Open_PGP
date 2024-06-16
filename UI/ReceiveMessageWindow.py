@@ -67,7 +67,7 @@ class ReceiveMessageWindow(QWidget):
             return
 
         try:
-            encrypted, receiver_private_key, msg, encrypted_ks_str, algo, comp, sign, encrypted, sender_email, receiver_email = context.message.get_passphase_for_receiving(
+            receiver_private_key, msg, encrypted_ks_str, algo, comp, sign, encrypted, sender_email, receiver_email = context.message.parse_received_data(
                 filepath, context.private_key_ring)
 
             passphrase = None
