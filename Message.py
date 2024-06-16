@@ -203,15 +203,16 @@ class Message:
             if signed:
                 parts = message.split('\n')
 
+                # on index -1 in empty string because of \n after timestamp
                 message_timestamp = parts[0]
-                message_content = parts[1]
+                message_content = "\n".join(parts[1:-5])
 
-                signature_str = parts[2]
+                signature_str = parts[-5]
                 signature = bytes(ast.literal_eval(signature_str))
-                leading_two_octets_str = parts[3]
+                leading_two_octets_str = parts[-4]
                 leading_two_octets = bytes(ast.literal_eval(leading_two_octets_str))
-                sender_key_id = parts[4]
-                signature_timestamp = parts[5]
+                sender_key_id = parts[-3]
+                signature_timestamp = parts[-2]
 
                 sender_key_pair = public_key_ring.get_key_by_key_id(sender_key_id)
 
@@ -244,7 +245,7 @@ class Message:
                 parts = message.split('\n')
 
                 message_timestamp = parts[0]
-                message_content = parts[1]
+                message_content = "\n".join(parts[1:])
 
             return (f"Timestamp:{message_timestamp}\n"
                     f"Content:{message_content}")
